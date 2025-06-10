@@ -1,6 +1,6 @@
 # 🛡️ Aegis Shell
 
-Aegis Shell is a **multi-window browser** focused on privacy, stealth, and resource efficiency. Launch new browser windows directly from the main interface—each window is protected before it ever becomes visible. Built on Chromium, Aegis Shell is extremely lightweight and consumes minimal system resources.
+Aegis Shell is a **multi-window browser** focused on privacy, stealth, and resource efficiency. Launch new browser windows directly from the main interface—each window is protected before it ever becomes visible. Built on Chromium powered by Tauri 2.0, Aegis Shell is extremely lightweight and consumes minimal system resources.
 
 ## 🚀 Features
 
@@ -35,6 +35,7 @@ Aegis Shell is a **multi-window browser** focused on privacy, stealth, and resou
 - [ ] Hide/obfuscate windows in the taskbar for even more stealth
 - [ ] Show console output/logs on the main page
 - [ ] Optimize main window obfuscation
+- [ ] Changing default Search engine to DuckDuckGo with support to change the engine.  
 - [ ] Add a button to disable protection (for debugging or trusted sessions)
 - [ ] General UI/UX improvements
 
