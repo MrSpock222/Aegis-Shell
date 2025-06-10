@@ -1,16 +1,15 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "aegis_shell",
-  "version": "0.1.0",
+  "productName": "Aegis-Shell",
+  "version": "1.0.0",
   "identifier": "com.aegis-shell.app",
   "build": {
     "frontendDist": "../src"
   },
   "app": {
-    "withGlobalTauri": true,
-    "windows": [
+    "withGlobalTauri": true,    "windows": [
       {
-        "title": "aegis_shell",
+        "title": "Aegis-Shell",
         "width": 800,
         "height": 600
       }
