@@ -1,6 +1,6 @@
 # 🛡️ Aegis Shell
 
-Aegis Shell is a **multi-window browser** focused on privacy, stealth, and resource efficiency. Launch new browser windows directly from the main interface—each window is protected before it ever becomes visible. Built on Chromium powered by Tauri 2.0, Aegis Shell is extremely lightweight and consumes minimal system resources.
+Aegis Shell is a **multi-window browser** focused on privacy, stealth, and resource efficiency. Launch new browser windows directly from the main interface—each window is protected before it ever becomes visible. Built on Tauri 2.0 powered by Chromium, Aegis Shell is extremely lightweight and consumes minimal system resources.
 
 ## 🚀 Features
 
