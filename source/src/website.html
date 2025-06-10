@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aegis Shell - Website</title>
+    <style>
+      /* ═══════════════════════════════════════════════════════════════════════════════
+         AEGIS SHELL - Website Window Styles
+         ═══════════════════════════════════════════════════════════════════════════════ */
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+        background: #242424;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      /* ─────────────────────────────────────────────────────────────────────────────
+         NAVIGATION BAR
+         ───────────────────────────────────────────────────────────────────────────── */
+
+      .nav-bar {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: rgba(0, 0, 0, 0.9);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        height: 50px;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+      }
+
+      .nav-button {
+        padding: 0.4rem 0.8rem;
+        background: #646cff;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 14px;
+        transition: all 0.2s ease;
+      }
+
+      .nav-button:hover {
+        background: #535bf2;
+        transform: translateY(-1px);
+      }
+
+      .url-display {
+        flex: 1;
+        padding: 0.4rem 0.8rem;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 14px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* ─────────────────────────────────────────────────────────────────────────────
+         LOADING & ERROR STATES  
+         ───────────────────────────────────────────────────────────────────────────── */
+
+      .loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.1rem;
+        background: #242424;
+      }
+
+      .error {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        color: rgba(255, 255, 255, 0.8);
+        text-align: center;
+        padding: 2rem;
+        background: #242424;
+      }
+
+      .error h2 {
+        color: #ff6b6b;
+        margin-bottom: 1rem;
+      }
+
+      .retry-btn {
+        margin-top: 1rem;
+        padding: 0.75rem 1.5rem;
+        background: #646cff;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+
+      .retry-btn:hover {
+        background: #535bf2;
+      }
+
+      /* Hide nav bar after successful redirect */
+      .hide-nav .nav-bar {
+        display: none;
+      }    </style>
+  </head>
+  <body>
+    <div class="nav-bar">
+      <button class="nav-button" onclick="goHome()">🏠 Home</button>
+      <button class="nav-button" onclick="refreshPage()">🔄</button>
+      <div class="url-display" id="url-display">Aegis Shell</div>
+      <button class="nav-button" onclick="closeWindow()">✕</button>
+    </div>
+    
+    <div id="loading" class="loading">
+      <div>
+        <h2>🚀 Aegis Shell</h2>
+        <p>Bereite Website vor...</p>
+      </div>
+    </div>
+    
+    <div id="error" class="error" style="display: none;">
+      <h2>⚠️ Fehler</h2>
+      <p id="error-message">Die Website konnte nicht geladen werden.</p>
+      <button class="retry-btn" onclick="retryLoad()">Erneut versuchen</button>
+    </div>    <script>
+      /* ═══════════════════════════════════════════════════════════════════════════════
+         AEGIS SHELL - Website Window Engine  
+         ═══════════════════════════════════════════════════════════════════════════════ */
+      
+      // Core Tauri imports
+      const { WebviewWindow } = window.__TAURI__.webviewWindow;
+      const { getCurrent } = window.__TAURI__.webviewWindow;
+      const { invoke } = window.__TAURI__.core;
+      
+      // ─────────────────────────────────────────────────────────────────────────────
+      // STATE & DOM REFERENCES
+      // ─────────────────────────────────────────────────────────────────────────────
+      
+      let currentUrl = '';
+      let urlDisplay;
+      let loadingDiv;
+      let errorDiv;
+      let errorMessage;
+      let hasRedirected = false;
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // SCREENSHOT PROTECTION FOR WEBSITE WINDOWS
+      // ─────────────────────────────────────────────────────────────────────────────      // Enable stealth mode for this website window
+      async function enableScreenshotProtection() {
+        try {
+          const currentWindow = getCurrent();
+          const result = await invoke('enable_screenshot_protection', { window: currentWindow });
+          console.log('Screenshot protection enabled for website window:', result);
+          return true;
+        } catch (error) {
+          console.error('Failed to enable screenshot protection for website window:', error);
+          return false;
+        }
+      }
+
+      // Check protection status
+      async function checkScreenshotProtectionStatus() {
+        try {
+          const currentWindow = getCurrent();
+          const result = await invoke('check_screenshot_protection_status', { window: currentWindow });
+          console.log('Website window screenshot protection status:', result);
+          return result;
+        } catch (error) {
+          console.error('Failed to check screenshot protection status for website window:', error);
+          return false;
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // DOM INITIALIZATION
+      // ─────────────────────────────────────────────────────────────────────────────
+
+      // Cache DOM element references
+      function initializeElements() {
+        urlDisplay = document.getElementById('url-display');
+        loadingDiv = document.getElementById('loading');
+        errorDiv = document.getElementById('error');
+        errorMessage = document.getElementById('error-message');
+      }
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // NAVIGATION ENGINE
+      // ─────────────────────────────────────────────────────────────────────────────      // Navigate to target website with stealth redirect
+      // Versteckter redirect mit nav-hide nach kurzer verzögerung
+      function navigateToWebsite(url) {
+        if (hasRedirected) return; // Prevent multiple redirects
+        
+        currentUrl = url;
+        hasRedirected = true;
+        
+        try {
+          const urlObj = new URL(url);
+          urlDisplay.textContent = urlObj.hostname;
+          
+          // Update window title with hostname
+          document.title = `Aegis Shell - ${urlObj.hostname}`;
+          
+          // Hide nav after delay and perform redirect
+          setTimeout(() => {
+            document.body.classList.add('hide-nav');
+            window.location.href = url;
+          }, 500);
+          
+        } catch (error) {
+          showError('Ungültige URL: ' + url);
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // ERROR HANDLING
+      // ─────────────────────────────────────────────────────────────────────────────
+
+      // Display error state
+      function showError(message) {
+        loadingDiv.style.display = 'none';
+        errorDiv.style.display = 'flex';
+        errorMessage.textContent = message;
+        hasRedirected = false;
+      }
+
+      // Retry failed navigation
+      function retryLoad() {
+        if (currentUrl) {
+          hasRedirected = false;
+          loadingDiv.style.display = 'flex';
+          errorDiv.style.display = 'none';
+          navigateToWebsite(currentUrl);
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // WINDOW CONTROLS
+      // ─────────────────────────────────────────────────────────────────────────────
+
+      // Refresh current page
+      function refreshPage() {
+        window.location.reload();
+      }      // Navigate back to main Aegis Shell
+      async function goHome() {
+        try {
+          // Create new main window
+          const mainWindow = new WebviewWindow('main', {
+            url: '/index.html',
+            title: 'Aegis Shell',
+            width: 1200,
+            height: 800,
+            center: true,
+            resizable: true
+          });
+          
+          // Close current window
+          const current = getCurrent();
+          await current.close();
+        } catch (error) {
+          console.error('Error opening home:', error);
+        }
+      }
+
+      // Close current window
+      async function closeWindow() {
+        try {
+          const current = getCurrent();
+          await current.close();
+        } catch (error) {
+          console.error('Error closing window:', error);
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // URL PARAMETER PROCESSING
+      // ─────────────────────────────────────────────────────────────────────────────
+
+      // Extract target URL from query parameters
+      function getUrlFromQuery() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('url');
+      }      
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // WEBSITE WINDOW INITIALIZATION
+      // ─────────────────────────────────────────────────────────────────────────────      // Main startup sequence for website windows
+      window.addEventListener('DOMContentLoaded', async () => {
+        initializeElements();
+
+        // 🛡️ COORDINATED PROTECTION ACTIVATION
+        // Koordinierte Schutz-Aktivierung mit Backend
+        const enableProtectionCoordinated = async () => {
+          console.log('🛡️ WEBSITE: Coordinating screenshot protection...');
+          
+          // Multiple attempts for maximum stability
+          for (let attempt = 1; attempt <= 15; attempt++) {
+            try {
+              await enableScreenshotProtection();
+              console.log(`⚡ WEBSITE PROTECTED! Screenshot protection enabled (attempt ${attempt})`);
+              
+              // Quick status check
+              setTimeout(async () => {
+                try {
+                  await checkScreenshotProtectionStatus();
+                } catch (e) { /* Ignore status errors */ }
+              }, 100);
+              
+              return true;
+            } catch (error) {
+              if (attempt === 15) {
+                console.error('❌ WEBSITE PROTECTION FAILED after 15 attempts:', error);
+              }
+            }
+            
+            // 50ms delay between attempts
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
+          return false;
+        };
+
+        // Start protection activation immediately
+        setTimeout(() => enableProtectionCoordinated(), 100);
+
+        // Try to load URL from query parameters
+        const urlFromQuery = getUrlFromQuery();
+        if (urlFromQuery) {
+          // Short delay before navigation
+          setTimeout(() => {
+            navigateToWebsite(urlFromQuery);
+          }, 300);
+        } else {
+          // No URL provided, show error
+          showError('Keine Website-URL angegeben');
+        }
+
+        // Listen for navigation events from main app
+        window.__TAURI__.event.listen('load-website', (event) => {
+          const { url } = event.payload;
+          if (url && !hasRedirected) {
+            navigateToWebsite(url);
+          }
+        });
+      });
+
+      // ─────────────────────────────────────────────────────────────────────────────
+      // EXTERNAL API EXPORTS
+      // ─────────────────────────────────────────────────────────────────────────────
+
+      // Export core functions for external use
+      window.websiteView = {
+        navigateToWebsite,
+        refreshPage,
+        goHome
+      };
+    </script>
+  </body>
+</html>
