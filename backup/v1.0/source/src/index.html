@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aegis Shell - Secure Invisible Browser</title>
+    <script type="module" src="/main.js" defer></script>
+  </head>
+
+  <body>
+    <!-- Security Badge -->
+    <div class="security-badge">🛡️ SECURE</div>
+
+    <!-- Main Container -->
+    <div class="container">
+      <!-- Home Screen -->
+      <div id="home-screen">
+        <!-- Header -->
+        <div class="header">
+          <h1 class="logo">AEGIS SHELL</h1>
+          <div class="tagline">// SECURE • INVISIBLE • UNSTOPPABLE</div>
+          <div class="subtitle">By Rüdi • Protecting your digital privacy</div>
+        </div>
+
+        <!-- URL Input Section -->
+        <div class="url-input-section">
+          <h3>▶ Navigate to target</h3>
+          <div class="home-url-bar">
+            <input 
+              type="text" 
+              id="home-url-input" 
+              placeholder="Enter URL or search query..." 
+              class="terminal-cursor"
+            />
+            <button id="home-go-btn">LAUNCH</button>
+          </div>
+        </div>
+
+        <!-- Quick Access Panel -->
+        <div class="quick-access">
+          <h2 class="section-title">Quick Access</h2>
+          <div class="link-grid">
+            <div class="quick-link" data-url="https://google.com">
+              <div class="quick-link-title">Google</div>
+              <div class="quick-link-desc">Search the web securely</div>
+            </div>
+            <div class="quick-link" data-url="https://github.com">
+              <div class="quick-link-title">GitHub</div>
+              <div class="quick-link-desc">Code repositories</div>
+            </div>
+            <div class="quick-link" data-url="https://stackoverflow.com">
+              <div class="quick-link-title">Stack Overflow</div>
+              <div class="quick-link-desc">Developer Q&A</div>
+            </div>
+            <div class="quick-link" data-url="https://reddit.com">
+              <div class="quick-link-title">Reddit</div>
+              <div class="quick-link-desc">Social discussions</div>
+            </div>
+            <div class="quick-link" data-url="https://youtube.com">
+              <div class="quick-link-title">YouTube</div>
+              <div class="quick-link-desc">Video platform</div>
+            </div>
+            <div class="quick-link" data-url="https://twitter.com">
+              <div class="quick-link-title">X (Twitter)</div>
+              <div class="quick-link-desc">Social network</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-left">
+        <div class="status-item">
+          <div class="status-indicator"></div>
+          <span>PROTECTED</span>
+        </div>
+        <div class="status-item">
+          <span>ENCRYPTION: AES-256</span>
+        </div>
+        <div class="status-item">
+          <span>STEALTH: ACTIVE</span>
+        </div>
+      </div>
+      <div class="status-right">
+        AEGIS_SHELL_v1.0
+      </div>
+    </div>
+  </body>
+</html>
