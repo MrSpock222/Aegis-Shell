@@ -21,9 +21,7 @@
           <h1 class="logo">AEGIS SHELL</h1>
           <div class="tagline">// SECURE • INVISIBLE • UNSTOPPABLE</div>
           <div class="subtitle">By Rüdi • Protecting your digital privacy</div>
-        </div>
-
-        <!-- URL Input Section -->
+        </div>        <!-- URL Input Section -->
         <div class="url-input-section">
           <h3>▶ Navigate to target</h3>
           <div class="home-url-bar">
@@ -34,6 +32,21 @@
               class="terminal-cursor"
             />
             <button id="home-go-btn">LAUNCH</button>
+            <button id="system-logs-btn">SYSTEM LOGS</button>
+          </div>
+        </div>
+
+        <!-- System Logs Panel -->
+        <div id="system-logs-panel" class="system-logs-panel hidden">
+          <div class="logs-header">
+            <h3>🛡️ SYSTEM LOGS</h3>
+            <button id="close-logs-btn">✕</button>
+          </div>
+          <div class="logs-content" id="logs-content">
+            <div class="log-entry info">
+              <span class="log-time">12:34:56</span>
+              <span class="log-message">🚀 AEGIS SHELL INITIALIZED - Secure invisible browsing ready</span>
+            </div>
           </div>
         </div>
 
