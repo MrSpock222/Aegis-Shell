@@ -1,4 +1,18 @@
-use tauri::{Manager, WebviewWindow, Listener};
+use tauri::{Manager, WebviewWindow, Listener, State};
+use std::sync::{Arc, Mutex};
+
+// Global protection state
+pub struct ProtectionState {
+    pub enabled: Arc<Mutex<bool>>,
+}
+
+impl Default for ProtectionState {
+    fn default() -> Self {
+        Self {
+            enabled: Arc::new(Mutex::new(true)), // Start with protection enabled
+        }
+    }
+}
 
 // Windows-spezifische Imports für Screenshot-Schutz
 #[cfg(target_os = "windows")]
@@ -13,9 +27,56 @@ use windows::{
 #[cfg(target_os = "windows")]
 const WDA_EXCLUDEFROMCAPTURE: u32 = 0x00000011;
 
-// Tauri Command für Screenshot-Schutz
 #[tauri::command]
-async fn enable_screenshot_protection(window: WebviewWindow) -> std::result::Result<String, String> {    #[cfg(target_os = "windows")]
+async fn set_global_protection_state(
+    state: State<'_, ProtectionState>,
+    enabled: bool
+) -> Result<String, String> {
+    match state.enabled.lock() {
+        Ok(mut global_enabled) => {
+            *global_enabled = enabled;
+            Ok(format!("Global protection state set to: {}", enabled))
+        }
+        Err(_) => Err("Failed to update global protection state".to_string())
+    }
+}
+
+#[tauri::command]
+async fn get_global_protection_state(
+    state: State<'_, ProtectionState>
+) -> Result<bool, String> {
+    match state.enabled.lock() {
+        Ok(global_enabled) => Ok(*global_enabled),
+        Err(_) => Err("Failed to read global protection state".to_string())
+    }
+}
+
+#[tauri::command]
+async fn enable_screenshot_protection_by_label(
+    app: tauri::AppHandle,
+    label: String
+) -> std::result::Result<String, String> {
+    if let Some(window) = app.get_webview_window(&label) {
+        enable_screenshot_protection(window).await
+    } else {
+        Err(format!("Window with label '{}' not found", label))
+    }
+}
+
+#[tauri::command]
+async fn disable_screenshot_protection_by_label(
+    app: tauri::AppHandle,
+    label: String
+) -> std::result::Result<String, String> {
+    if let Some(window) = app.get_webview_window(&label) {
+        disable_screenshot_protection(window).await
+    } else {
+        Err(format!("Window with label '{}' not found", label))
+    }
+}
+
+#[tauri::command]
+async fn enable_screenshot_protection(window: WebviewWindow) -> std::result::Result<String, String> {#[cfg(target_os = "windows")]
     {
         // Hole das Windows HWND vom Tauri-Fenster
         let hwnd_raw = window.hwnd().map_err(|e| format!("Failed to get window handle: {}", e))?;
@@ -81,14 +142,18 @@ async fn check_screenshot_protection_status(window: WebviewWindow) -> std::resul
 // Alte greet-Funktion entfernt, da nicht mehr benötigt
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    tauri::Builder::default()
+pub fn run() {    tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(ProtectionState::default())
         .invoke_handler(tauri::generate_handler![
             enable_screenshot_protection,
             disable_screenshot_protection,
-            check_screenshot_protection_status
-        ])        .setup(|app| {
+            check_screenshot_protection_status,
+            enable_screenshot_protection_by_label,
+            disable_screenshot_protection_by_label,
+            set_global_protection_state,
+            get_global_protection_state
+        ]).setup(|app| {
             // Aktiviere Screenshot-Schutz für das Hauptfenster beim Start
             if let Some(window) = app.get_webview_window("main") {
                 tauri::async_runtime::spawn(async move {
@@ -117,38 +182,56 @@ pub fn run() {
                             // Automatische Protection + Show-Sequenz
                             tauri::async_runtime::spawn(async move {
                                 // Warte bis das Fenster vollständig initialisiert ist
-                                tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;
-                                
-                                if let Some(window) = app_handle.get_webview_window(&window_label) {
-                                    // 1. Versuche Screenshot-Schutz zu aktivieren
-                                    let mut protection_enabled = false;
-                                    for attempt in 1..=5 {
-                                        match enable_screenshot_protection(window.clone()).await {
+                                tokio::time::sleep(tokio::time::Duration::from_millis(800)).await;                                if let Some(window) = app_handle.get_webview_window(&window_label) {
+                                    // Hole den globalen Protection-Status
+                                    let protection_state = app_handle.state::<ProtectionState>();
+                                    let protection_enabled = match protection_state.enabled.lock() {
+                                        Ok(enabled) => *enabled,
+                                        Err(_) => true, // Fallback: Schutz aktiviert
+                                    };
+                                    
+                                    if protection_enabled {
+                                        // 1. Versuche Screenshot-Schutz zu aktivieren
+                                        let mut protection_success = false;
+                                        for attempt in 1..=5 {
+                                            match enable_screenshot_protection(window.clone()).await {
+                                                Ok(_) => {
+                                                    println!("🛡️ Backend protection enabled for: {} (attempt {})", window_label, attempt);
+                                                    protection_success = true;
+                                                    break;
+                                                }
+                                                Err(e) => {
+                                                    if attempt == 5 {
+                                                        eprintln!("❌ Backend protection failed for {} after {} attempts: {}", window_label, attempt, e);
+                                                    }
+                                                    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                                                }
+                                            }
+                                        }
+                                        
+                                        // 2. Fenster anzeigen
+                                        match window.show() {
                                             Ok(_) => {
-                                                println!("🛡️ Backend protection enabled for: {} (attempt {})", window_label, attempt);
-                                                protection_enabled = true;
-                                                break;
+                                                if protection_success {
+                                                    println!("✅ BACKEND: Window shown safely with protection: {}", window_label);
+                                                } else {
+                                                    println!("⚠️ BACKEND: Window shown but protection failed: {}", window_label);
+                                                }
                                             }
                                             Err(e) => {
-                                                if attempt == 5 {
-                                                    eprintln!("❌ Backend protection failed for {} after {} attempts: {}", window_label, attempt, e);
-                                                }
-                                                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+                                                eprintln!("❌ BACKEND: Failed to show window {}: {}", window_label, e);
                                             }
                                         }
-                                    }
-                                    
-                                    // 2. Fenster IMMER anzeigen - auch ohne Schutz
-                                    match window.show() {
-                                        Ok(_) => {
-                                            if protection_enabled {
-                                                println!("✅ BACKEND: Window shown safely with protection: {}", window_label);
-                                            } else {
-                                                println!("⚠️ BACKEND: Window shown WITHOUT protection: {}", window_label);
+                                    } else {
+                                        // Globaler Schutz ist deaktiviert - Fenster ohne Schutz anzeigen
+                                        println!("🔓 BACKEND: Global protection is disabled");
+                                        match window.show() {
+                                            Ok(_) => {
+                                                println!("👁️ BACKEND: Window shown WITHOUT protection: {}", window_label);
                                             }
-                                        }
-                                        Err(e) => {
-                                            eprintln!("❌ BACKEND: Failed to show window {}: {}", window_label, e);
+                                            Err(e) => {
+                                                eprintln!("❌ BACKEND: Failed to show unprotected window {}: {}", window_label, e);
+                                            }
                                         }
                                     }
                                 } else {

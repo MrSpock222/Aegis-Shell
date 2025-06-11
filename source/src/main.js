@@ -5,7 +5,16 @@
 // Core Tauri imports
 const { invoke } = window.__TAURI__.core;
 const { WebviewWindow } = window.__TAURI__.webviewWindow;
-const { getCurrent } = window.__TAURI__.webviewWindow;
+
+// Try to get the current window - handle different Tauri versions
+let getCurrentWindow;
+try {
+  getCurrentWindow = window.__TAURI__.webviewWindow.getCurrentWebviewWindow || 
+                   window.__TAURI__.webviewWindow.getCurrent ||
+                   (() => null);
+} catch (error) {
+  getCurrentWindow = () => null;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SCREENSHOT PROTECTION API
@@ -14,8 +23,10 @@ const { getCurrent } = window.__TAURI__.webviewWindow;
 // Enable stealth mode for current window
 async function enableScreenshotProtection() {
   try {
-    const currentWindow = getCurrent();
-    const result = await invoke('enable_screenshot_protection', { window: currentWindow });
+    const currentWindow = getCurrentWindow();
+    const result = await invoke('enable_screenshot_protection', { 
+      window: currentWindow ? currentWindow : 'main'
+    });
     console.log('Screenshot protection enabled:', result);
     addSystemLog('✅ Screenshot protection enabled for main window', 'success');
     return true;
@@ -29,12 +40,16 @@ async function enableScreenshotProtection() {
 // Disable stealth mode 
 async function disableScreenshotProtection() {
   try {
-    const currentWindow = getCurrent();
-    const result = await invoke('disable_screenshot_protection', { window: currentWindow });
+    const currentWindow = getCurrentWindow();
+    const result = await invoke('disable_screenshot_protection', { 
+      window: currentWindow ? currentWindow : 'main'
+    });
     console.log('Screenshot protection disabled:', result);
+    addSystemLog('🔓 Screenshot protection disabled for main window', 'warning');
     return true;
   } catch (error) {
     console.error('Failed to disable screenshot protection:', error);
+    addSystemLog(`❌ Failed to disable screenshot protection: ${error.message}`, 'error');
     return false;
   }
 }
@@ -42,8 +57,10 @@ async function disableScreenshotProtection() {
 // Check if window is currently protected
 async function checkScreenshotProtectionStatus() {
   try {
-    const currentWindow = getCurrent();
-    const result = await invoke('check_screenshot_protection_status', { window: currentWindow });
+    const currentWindow = getCurrentWindow();
+    const result = await invoke('check_screenshot_protection_status', { 
+      window: currentWindow ? currentWindow : 'main'
+    });
     console.log('Screenshot protection status:', result);
     return result;
   } catch (error) {
@@ -65,10 +82,13 @@ let systemLogsBtn;
 let systemLogsPanel;
 let closeLogsBtn;
 let logsContent;
+let protectionToggleBtn;
 
 // Current app state
 let isOnHomePage = true;
 let systemLogs = [];
+let isProtectionEnabled = true;
+let activeWindows = []; // Track all active windows
 
 // Initialize with startup log
 systemLogs.push({
@@ -142,6 +162,7 @@ function toggleSystemLogs() {
     systemLogsPanel.classList.remove('hidden');
     updateLogsDisplay();
     addSystemLog('📋 System logs panel opened', 'info');
+    logWindowStatus(); // Show current window status when logs are opened
   } else {
     systemLogsPanel.classList.add('hidden');
     addSystemLog('📋 System logs panel closed', 'info');
@@ -261,7 +282,6 @@ function setupEventListeners() {
       handleHomeUrlNavigation();
     }
   });
-
   // System logs button
   systemLogsBtn.addEventListener("click", () => {
     toggleSystemLogs();
@@ -271,6 +291,11 @@ function setupEventListeners() {
   closeLogsBtn.addEventListener("click", () => {
     systemLogsPanel.classList.add('hidden');
     addSystemLog('📋 System logs panel closed', 'info');
+  });  // Protection toggle button
+  protectionToggleBtn.addEventListener("click", () => {
+    addSystemLog('🔄 Global protection toggle requested', 'info');
+    logWindowStatus();
+    toggleProtection();
   });
 
   // Quick link shortcuts
@@ -300,8 +325,7 @@ async function openInNewAegisWindow(url) {
   try {
     const windowLabel = `aegis-${Date.now()}`;
     addSystemLog(`🆔 New window detected: ${windowLabel}`, 'info');
-    
-    const webview = new WebviewWindow(windowLabel, {
+      const webview = new WebviewWindow(windowLabel, {
       url: `website.html?url=${encodeURIComponent(url)}`,
       title: `Aegis Shell - ${new URL(url).hostname}`,
       width: 1200,
@@ -310,21 +334,65 @@ async function openInNewAegisWindow(url) {
       minHeight: 600,
       center: true,
       resizable: true,
-      visible: false, // 🛡️ Start hidden for stealth protection
+      visible: !isProtectionEnabled, // 🛡️ Start visible only if protection is disabled
       skipTaskbar: false
     });
     
-    // Backend handles protection & visibility automatically
+    // Add to active windows list
+    const windowInfo = {
+      label: windowLabel,
+      window: webview,
+      url: url,
+      created: new Date()
+    };
+    activeWindows.push(windowInfo);
+      // Backend handles protection & visibility automatically
     webview.once('tauri://created', async () => {
-      console.log(`🆕 Window created (hidden): ${windowLabel} for ${url}`);
-      addSystemLog(`🛡️ Backend protection enabled for: ${windowLabel} (attempt 1)`, 'success');
-      addSystemLog(`✅ BACKEND: Window shown safely with protection: ${windowLabel}`, 'success');
-      console.log(`⏳ Backend will handle protection and show automatically...`);
+      console.log(`🆕 Window created: ${windowLabel} for ${url}`);
+      
+      // Apply current global protection status to new window
+      if (isProtectionEnabled) {
+        // Window should already be protected by backend and hidden, just show it
+        addSystemLog(`🛡️ Backend protection enabled for: ${windowLabel} (attempt 1)`, 'success');
+        addSystemLog(`✅ BACKEND: Window shown safely with protection: ${windowLabel}`, 'success');
+        
+        // Show the window safely after protection is confirmed
+        setTimeout(async () => {
+          try {
+            await webview.show();
+            addSystemLog(`👁️ Protected window now visible: ${windowLabel}`, 'success');
+          } catch (error) {
+            console.error(`Failed to show protected window: ${error}`);
+          }
+        }, 500);
+      } else {
+        // Protection is globally disabled, disable it for this window too
+        try {
+          await applyProtectionToWindow(windowLabel, false);
+          addSystemLog(`🔓 Protection disabled for new window: ${windowLabel}`, 'warning');
+          
+          // Since window was created visible (visible: true), no need to show() it manually
+          addSystemLog(`👁️ Unprotected window is already visible: ${windowLabel}`, 'warning');
+        } catch (error) {
+          addSystemLog(`❌ Failed to apply protection status to: ${windowLabel}`, 'error');
+        }
+      }
+      
+      console.log(`⏳ Window handling complete for: ${windowLabel}`);
+    });
+
+    // Handle window closure - remove from active windows list
+    webview.once('tauri://destroyed', () => {
+      activeWindows = activeWindows.filter(w => w.label !== windowLabel);
+      addSystemLog(`🗑️ Window closed: ${windowLabel}`, 'info');
+      console.log(`Window ${windowLabel} removed from active windows list`);
     });
 
     webview.once('tauri://error', (e) => {
       console.error('Error creating new Aegis window:', e);
       addSystemLog(`❌ Error creating window: ${e.payload}`, 'error');
+      // Remove from active windows list on error
+      activeWindows = activeWindows.filter(w => w.label !== windowLabel);
       alert('Fehler beim Erstellen eines neuen Fensters: ' + e.payload);
     });
     
@@ -342,8 +410,7 @@ async function openInNewAegisWindow(url) {
 // Main app startup sequence
 window.addEventListener("DOMContentLoaded", async () => {
   console.log("🔧 DOM Content Loaded - Initializing Aegis Shell...");
-  
-  // Grab DOM references
+    // Grab DOM references
   homeUrlInput = document.querySelector("#home-url-input");
   homeGoBtn = document.querySelector("#home-go-btn");
   homeScreen = document.querySelector("#home-screen");
@@ -352,6 +419,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   systemLogsPanel = document.querySelector("#system-logs-panel");
   closeLogsBtn = document.querySelector("#close-logs-btn");
   logsContent = document.querySelector("#logs-content");
+  protectionToggleBtn = document.querySelector("#protection-toggle-btn");
+  protectionToggleBtn = document.querySelector("#protection-toggle-btn");
+  
   // Initialize system logs
   addSystemLog('🚀 AEGIS SHELL INITIALIZING...', 'info');
   addSystemLog('🔧 DOM Content Loaded - Initializing Aegis Shell...', 'info');
@@ -359,16 +429,21 @@ window.addEventListener("DOMContentLoaded", async () => {
   addSystemLog('🔐 AES-256 encryption ready', 'success');
   addSystemLog('👻 Stealth mode preparing...', 'info');
   addSystemLog(`📅 Session started: ${new Date().toLocaleDateString('de-DE')}`, 'info');
-  
-  // Debug: Verify all elements found
+    // Debug: Verify all elements found
   console.log("Elements found:", {
     homeUrlInput: !!homeUrlInput,
     homeGoBtn: !!homeGoBtn,
     homeScreen: !!homeScreen,
     quickLinksCount: quickLinks.length,
     systemLogsBtn: !!systemLogsBtn,
-    systemLogsPanel: !!systemLogsPanel
+    systemLogsPanel: !!systemLogsPanel,
+    protectionToggleBtn: !!protectionToggleBtn
   });
+  
+  // Initialize protection button
+  if (protectionToggleBtn) {
+    updateProtectionButton();
+  }
   
   // Abort if critical elements missing
   if (!homeUrlInput || !homeGoBtn || !homeScreen) {
@@ -384,22 +459,47 @@ window.addEventListener("DOMContentLoaded", async () => {
   // Display main interface
   showHomePage();
   console.log("✅ Home page displayed");
-  
   // Activate stealth protection for main window
   try {
     await enableScreenshotProtection();
     console.log("🛡️ Main window protected - Aegis Shell initialized");
-    addSystemLog('✅ Screenshot protection enabled for main window', 'success');
+    
+    // Update protection status
+    isProtectionEnabled = true;
+    updateProtectionButton();
+    addSystemLog('🛡️ Initial protection status: ENABLED', 'success');
+    
+    // Sync global protection state with backend
+    try {
+      await invoke('set_global_protection_state', { enabled: true });
+      addSystemLog('🔄 Backend global protection state synchronized: ENABLED', 'success');
+    } catch (error) {
+      addSystemLog(`❌ Failed to sync backend protection state: ${error}`, 'error');
+    }
     
     // Update live status indicators
     updateStatusBar();
   } catch (error) {
     console.error("Failed to enable screenshot protection for main window:", error);
+    isProtectionEnabled = false;
+    updateProtectionButton();
     addSystemLog(`❌ Failed to enable screenshot protection: ${error.message}`, 'error');
+    
+    // Sync global protection state with backend (disabled)
+    try {
+      await invoke('set_global_protection_state', { enabled: false });
+      addSystemLog('🔄 Backend global protection state synchronized: DISABLED', 'warning');
+    } catch (error) {
+      addSystemLog(`❌ Failed to sync backend protection state: ${error}`, 'error');
+    }
   }
-  
-  console.log("🚀 AEGIS SHELL INITIALIZED - Secure invisible browsing ready");
+    console.log("🚀 AEGIS SHELL INITIALIZED - Secure invisible browsing ready");
   addSystemLog('🚀 AEGIS SHELL INITIALIZED - Secure invisible browsing ready', 'success');
+  
+  // Periodic update of button tooltip with window count
+  setInterval(() => {
+    updateProtectionButton();
+  }, 5000); // Update every 5 seconds
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -438,5 +538,134 @@ function updateStatusBar() {
       statusItems[1].textContent = 'ENCRYPTION: ACTIVE';
       statusItems[2].textContent = 'STEALTH: ENGAGED';
     }, 1000);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROTECTION TOGGLE FUNCTIONALITY
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Apply protection to a specific window
+async function applyProtectionToWindow(windowLabel, enable = true) {
+  try {
+    if (enable) {
+      const result = await invoke('enable_screenshot_protection_by_label', { 
+        label: windowLabel
+      });
+      console.log(`Protection enabled for ${windowLabel}:`, result);
+    } else {
+      const result = await invoke('disable_screenshot_protection_by_label', { 
+        label: windowLabel
+      });
+      console.log(`Protection disabled for ${windowLabel}:`, result);
+    }
+    return true;
+  } catch (error) {
+    console.error(`Failed to ${enable ? 'enable' : 'disable'} protection for window ${windowLabel}:`, error);
+    return false;
+  }
+}
+
+// Toggle screenshot protection for all windows
+async function toggleProtection() {
+  try {
+    if (isProtectionEnabled) {
+      // Disable protection for all windows
+      addSystemLog('🔄 Disabling protection for all windows...', 'info');
+      
+      // 1. Update global backend state FIRST
+      try {
+        await invoke('set_global_protection_state', { enabled: false });
+        addSystemLog('🔄 Backend global protection state: DISABLED', 'info');
+      } catch (error) {
+        addSystemLog(`❌ Failed to update backend protection state: ${error}`, 'error');
+      }
+      
+      // 2. Disable for main window
+      const mainResult = await disableScreenshotProtection();
+        // 3. Disable for all active browser windows
+      let windowCount = 0;
+      for (const windowInfo of activeWindows) {
+        if (windowInfo.label) {
+          try {
+            await applyProtectionToWindow(windowInfo.label, false);
+            windowCount++;
+            addSystemLog(`🔓 Protection disabled for: ${windowInfo.label}`, 'warning');
+          } catch (error) {
+            addSystemLog(`❌ Failed to disable protection for: ${windowInfo.label}`, 'error');
+          }
+        }
+      }
+      
+      if (mainResult) {
+        isProtectionEnabled = false;
+        updateProtectionButton();
+        addSystemLog(`🔓 Screenshot protection DISABLED for ${windowCount + 1} windows`, 'warning');
+        addSystemLog('⚠️ Warning: All windows are now vulnerable to screenshots', 'warning');
+      }
+    } else {
+      // Enable protection for all windows
+      addSystemLog('🔄 Enabling protection for all windows...', 'info');
+      
+      // 1. Update global backend state FIRST
+      try {
+        await invoke('set_global_protection_state', { enabled: true });
+        addSystemLog('🔄 Backend global protection state: ENABLED', 'info');
+      } catch (error) {
+        addSystemLog(`❌ Failed to update backend protection state: ${error}`, 'error');
+      }
+      
+      // 2. Enable for main window
+      const mainResult = await enableScreenshotProtection();
+        // 3. Enable for all active browser windows
+      let windowCount = 0;
+      for (const windowInfo of activeWindows) {
+        if (windowInfo.label) {
+          try {
+            await applyProtectionToWindow(windowInfo.label, true);
+            windowCount++;
+            addSystemLog(`🛡️ Protection enabled for: ${windowInfo.label}`, 'success');
+          } catch (error) {
+            addSystemLog(`❌ Failed to enable protection for: ${windowInfo.label}`, 'error');
+          }
+        }
+      }
+      
+      if (mainResult) {
+        isProtectionEnabled = true;
+        updateProtectionButton();
+        addSystemLog(`🛡️ Screenshot protection ENABLED for ${windowCount + 1} windows`, 'success');
+        addSystemLog('✅ All windows are now protected from screenshots', 'success');
+      }
+    }
+  } catch (error) {
+    addSystemLog(`❌ Failed to toggle protection: ${error.message}`, 'error');
+  }
+}
+
+// Update protection button appearance
+function updateProtectionButton() {
+  if (!protectionToggleBtn) return;
+  
+  if (isProtectionEnabled) {
+    protectionToggleBtn.className = 'protection-enabled';
+    protectionToggleBtn.textContent = '🛡️ PROTECTION ON';
+    protectionToggleBtn.title = `Click to disable screenshot protection for all windows (${activeWindows.length + 1} total)`;
+  } else {
+    protectionToggleBtn.className = 'protection-disabled';
+    protectionToggleBtn.textContent = '🔓 PROTECTION OFF';
+    protectionToggleBtn.title = `Click to enable screenshot protection for all windows (${activeWindows.length + 1} total)`;
+  }
+}
+
+// Log current window status
+function logWindowStatus() {
+  addSystemLog(`📊 Active windows: ${activeWindows.length + 1} (main + ${activeWindows.length} browser)`, 'info');
+  addSystemLog(`🛡️ Global protection status: ${isProtectionEnabled ? 'ENABLED' : 'DISABLED'}`, isProtectionEnabled ? 'success' : 'warning');
+  
+  // Debug: List all active window labels
+  if (activeWindows.length > 0) {
+    const windowLabels = activeWindows.map(w => w.label).join(', ');
+    addSystemLog(`🪟 Window labels: ${windowLabels}`, 'info');
   }
 }
