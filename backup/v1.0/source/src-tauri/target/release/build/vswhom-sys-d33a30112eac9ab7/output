@@ -1,0 +1,80 @@
+cargo:rerun-if-changed=build.rs
+cargo:rerun-if-changed=ext/vswhom.cpp
+OPT_LEVEL = Some(0)
+OUT_DIR = Some(C:\Users\Niklas\Documents\GitHub\Aegis-Shell\source\src-tauri\target\release\build\vswhom-sys-d33a30112eac9ab7\out)
+TARGET = Some(x86_64-pc-windows-msvc)
+cargo:rerun-if-env-changed=VCINSTALLDIR
+VCINSTALLDIR = None
+cargo:rerun-if-env-changed=VSTEL_MSBuildProjectFullPath
+VSTEL_MSBuildProjectFullPath = None
+cargo:rerun-if-env-changed=VSCMD_ARG_VCVARS_SPECTRE
+VSCMD_ARG_VCVARS_SPECTRE = None
+cargo:rerun-if-env-changed=WindowsSdkDir
+WindowsSdkDir = None
+cargo:rerun-if-env-changed=WindowsSDKVersion
+WindowsSDKVersion = None
+cargo:rerun-if-env-changed=LIB
+LIB = None
+PATH = Some(C:\Users\Niklas\Documents\GitHub\Aegis-Shell\source\src-tauri\target\release\deps;C:\Users\Niklas\Documents\GitHub\Aegis-Shell\source\src-tauri\target\release;C:\Users\Niklas\.rustup\toolchains\stable-x86_64-pc-windows-msvc\lib\rustlib\x86_64-pc-windows-msvc\lib;C:\Users\Niklas\Documents\GitHub\Aegis-Shell\source\node_modules\.bin;C:\Users\Niklas\Documents\GitHub\Aegis-Shell\node_modules\.bin;C:\Users\Niklas\Documents\GitHub\node_modules\.bin;C:\Users\Niklas\Documents\node_modules\.bin;C:\Users\Niklas\node_modules\.bin;C:\Users\node_modules\.bin;C:\node_modules\.bin;C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\run-script\lib\node-gyp-bin;C:\Program Files\PowerShell\7;C:\Python313\Scripts\;C:\Python313\;C:\Program Files (x86)\Common Files\Oracle\Java\java8path;C:\Program Files (x86)\Common Files\Oracle\Java\javapath;c:\program files (x86)\vmware\vmware workstation\bin\;c:\windows\system32\amd;c:\windows\system32;c:\windows;c:\windows\system32\wbem;c:\windows\system32\windowspowershell\v1.0\;c:\windows\system32\openssh\;c:\program files\nvidia corporation\nvidia app\nvdlisr;c:\users\niklas\appdata\local\microsoft\windowsapps;c:\program files\crucial\crucial storage executive;c:\program files\dotnet\;c:\program files (x86)\windows kits\10\windows performance toolkit\;c:\program files\microsoft sql server\client sdk\odbc\170\tools\binn\;c:\program files (x86)\microsoft sql server\150\tools\binn\;c:\program files\microsoft sql server\150\tools\binn\;c:\program files\microsoft sql server\150\dts\binn\;c:\program files (x86)\windows kits\8.1\windows performance toolkit\;c:\program files\putty\;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\PowerShell\7\;C:\Program Files\nodejs\;C:\ProgramData\chocolatey\bin;C:\Users\Niklas\.cargo\bin;C:\Users\Niklas\AppData\Local\Microsoft\WindowsApps;C:\Users\Niklas\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\Niklas\AppData\Local\GitHubDesktop\bin;C:\Users\Niklas\.dotnet\tools;C:\Users\Niklas\AppData\Roaming\npm;c:\Users\Niklas\AppData\Roaming\Code\User\globalStorage\github.copilot-chat\debugCommand;C:\Users\Niklas\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin)
+cargo:rerun-if-env-changed=INCLUDE
+INCLUDE = None
+HOST = Some(x86_64-pc-windows-msvc)
+cargo:rerun-if-env-changed=CXX_x86_64-pc-windows-msvc
+CXX_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=CXX_x86_64_pc_windows_msvc
+CXX_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=HOST_CXX
+HOST_CXX = None
+cargo:rerun-if-env-changed=CXX
+CXX = None
+cargo:rerun-if-env-changed=CRATE_CC_NO_DEFAULTS
+CRATE_CC_NO_DEFAULTS = None
+CARGO_CFG_TARGET_FEATURE = Some(cmpxchg16b,fxsr,sse,sse2,sse3)
+DEBUG = Some(false)
+cargo:rerun-if-env-changed=CXXFLAGS
+CXXFLAGS = None
+cargo:rerun-if-env-changed=HOST_CXXFLAGS
+HOST_CXXFLAGS = None
+cargo:rerun-if-env-changed=CXXFLAGS_x86_64_pc_windows_msvc
+CXXFLAGS_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=CXXFLAGS_x86_64-pc-windows-msvc
+CXXFLAGS_x86_64-pc-windows-msvc = None
+CARGO_ENCODED_RUSTFLAGS = Some()
+cargo:rerun-if-env-changed=CC_ENABLE_DEBUG_OUTPUT
+vswhom.cpp
+ext/vswhom.cpp(213): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+ext/vswhom.cpp(216): warning C4267: '=': conversion from 'size_t' to 'int', possible loss of data
+ext/vswhom.cpp(431): warning C4456: declaration of 'hr' hides previous local declaration
+ext/vswhom.cpp(418): note: see declaration of 'hr'
+ext/vswhom.cpp(459): warning C4244: 'argument': conversion from 'LONGLONG' to 'int', possible loss of data
+ext/vswhom.cpp(502): warning C4456: declaration of 'rc' hides previous local declaration
+ext/vswhom.cpp(410): note: see declaration of 'rc'
+cargo:rerun-if-env-changed=AR_x86_64-pc-windows-msvc
+AR_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=AR_x86_64_pc_windows_msvc
+AR_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=HOST_AR
+HOST_AR = None
+cargo:rerun-if-env-changed=AR
+AR = None
+cargo:rerun-if-env-changed=ARFLAGS
+ARFLAGS = None
+cargo:rerun-if-env-changed=HOST_ARFLAGS
+HOST_ARFLAGS = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64_pc_windows_msvc
+ARFLAGS_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=ARFLAGS_x86_64-pc-windows-msvc
+ARFLAGS_x86_64-pc-windows-msvc = None
+cargo:rustc-link-search=native=C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\atlmfc\lib\x64
+cargo:rustc-link-lib=static=vswhom
+cargo:rustc-link-search=native=C:\Users\Niklas\Documents\GitHub\Aegis-Shell\source\src-tauri\target\release\build\vswhom-sys-d33a30112eac9ab7\out
+cargo:rerun-if-env-changed=CXXSTDLIB_x86_64-pc-windows-msvc
+CXXSTDLIB_x86_64-pc-windows-msvc = None
+cargo:rerun-if-env-changed=CXXSTDLIB_x86_64_pc_windows_msvc
+CXXSTDLIB_x86_64_pc_windows_msvc = None
+cargo:rerun-if-env-changed=HOST_CXXSTDLIB
+HOST_CXXSTDLIB = None
+cargo:rerun-if-env-changed=CXXSTDLIB
+CXXSTDLIB = None
+cargo:rustc-link-lib=dylib=OleAut32
+cargo:rustc-link-lib=dylib=Ole32

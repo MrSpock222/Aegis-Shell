@@ -1,0 +1,11 @@
+cargo:rerun-if-changed=permissions
+cargo:PERMISSION_FILES_PATH=C:\Users\Niklas\Documents\GitHub\Aegis-Shell\source\src-tauri\target\release\build\tauri-plugin-opener-8237d9e477b5ea7f\out\tauri-plugin-opener-permission-files
+cargo:rerun-if-env-changed=REMOVE_UNUSED_COMMANDS
+cargo:GLOBAL_SCOPE_SCHEMA_PATH=C:\Users\Niklas\Documents\GitHub\Aegis-Shell\source\src-tauri\target\release\build\tauri-plugin-opener-8237d9e477b5ea7f\out\global-scope.json
+cargo:GLOBAL_API_SCRIPT_PATH=\\?\C:\Users\Niklas\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tauri-plugin-opener-2.2.7\api-iife.js
+cargo:rustc-check-cfg=cfg(mobile)
+cargo:rustc-check-cfg=cfg(desktop)
+cargo:rustc-cfg=desktop
+cargo:rustc-check-cfg=cfg(desktop)
+cargo:rustc-cfg=desktop
+cargo:rustc-check-cfg=cfg(mobile)
