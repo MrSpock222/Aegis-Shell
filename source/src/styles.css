@@ -523,6 +523,69 @@ body::after {
   transform: translateY(0);
 }
 
+/* Protection Toggle Button */
+#protection-toggle-btn {
+  border: none;
+  padding: 0.8rem 1.2rem;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  white-space: nowrap;
+  position: relative;
+  overflow: hidden;
+}
+
+#protection-toggle-btn.protection-enabled {
+  background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+  color: var(--bg-primary);
+  box-shadow: var(--glow);
+}
+
+#protection-toggle-btn.protection-disabled {
+  background: linear-gradient(45deg, var(--accent-color), #ff4444);
+  color: white;
+  box-shadow: 0 0 20px var(--accent-color);
+}
+
+#protection-toggle-btn:hover {
+  transform: translateY(-2px);
+}
+
+#protection-toggle-btn.protection-enabled:hover {
+  box-shadow: var(--glow-intense);
+  background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
+}
+
+#protection-toggle-btn.protection-disabled:hover {
+  box-shadow: 0 0 30px var(--accent-color), 0 0 60px var(--accent-color);
+  background: linear-gradient(45deg, #ff4444, var(--accent-color));
+}
+
+#protection-toggle-btn:active {
+  transform: translateY(0);
+}
+
+/* Protection status indicator animation */
+#protection-toggle-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+#protection-toggle-btn:hover::before {
+  left: 100%;
+}
+
 /* Scrollbar styling for logs */
 .logs-content::-webkit-scrollbar {
   width: 8px;
@@ -552,7 +615,8 @@ body::after {
     gap: 0.5rem;
   }
   
-  #system-logs-btn {
+  #system-logs-btn,
+  #protection-toggle-btn {
     align-self: stretch;
   }
   
