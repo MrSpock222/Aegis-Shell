@@ -605,6 +605,298 @@ body::after {
   background: var(--secondary-color);
 }
 
+/* Protection Modal Styles */
+.protection-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.protection-modal.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.protection-modal-content {
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-primary) 100%);
+  border: 2px solid var(--accent-color);
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 
+    var(--glow-intense),
+    0 20px 40px rgba(0, 0, 0, 0.8);
+  animation: modal-slide-in 0.3s ease-out;
+  position: relative;
+}
+
+@keyframes modal-slide-in {
+  0% {
+    transform: translateY(-50px) scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.protection-modal-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 1rem;
+}
+
+.protection-modal-header h2 {
+  font-family: 'Orbitron', monospace;
+  font-size: 1.5rem;
+  color: var(--accent-color);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.protection-warning {
+  background: rgba(255, 0, 102, 0.1);
+  border: 1px solid var(--accent-color);
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: var(--accent-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  animation: warning-pulse 2s ease-in-out infinite;
+}
+
+@keyframes warning-pulse {
+  0%, 100% { 
+    background: rgba(255, 0, 102, 0.1);
+    transform: scale(1);
+  }
+  50% { 
+    background: rgba(255, 0, 102, 0.2);
+    transform: scale(1.02);
+  }
+}
+
+.protection-modal-body {
+  margin-bottom: 1.5rem;
+}
+
+.verification-warning {
+  background: rgba(255, 0, 102, 0.05);
+  border: 1px solid rgba(255, 0, 102, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.verification-warning p {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.verification-warning strong {
+  color: var(--accent-color);
+}
+
+.verification-input-section {
+  margin-bottom: 1.5rem;
+}
+
+.verification-input-section label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 1px;
+}
+
+.verification-instruction {
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.verification-instruction strong {
+  color: var(--accent-color);
+  font-family: 'Orbitron', monospace;
+}
+
+.verification-input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  padding: 0.75rem;
+  color: var(--text-primary);
+  font-family: 'Orbitron', monospace;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-align: center;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.verification-input:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 20px rgba(255, 0, 102, 0.3);
+  background: var(--bg-secondary);
+}
+
+.verification-input.correct {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+  background: rgba(0, 255, 65, 0.05);
+}
+
+.verification-countdown {
+  margin-bottom: 1rem;
+}
+
+.countdown-text {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  font-family: 'Orbitron', monospace;
+}
+
+.countdown-text span {
+  color: var(--accent-color);
+  font-weight: bold;
+}
+
+.countdown-bar {
+  width: 100%;
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.countdown-progress {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color), var(--primary-color));
+  width: 100%;
+  transition: width 1s linear;
+  box-shadow: 0 0 10px rgba(255, 0, 102, 0.5);
+}
+
+.protection-modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.btn-cancel, .btn-confirm {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-cancel {
+  background: var(--bg-secondary);
+  border: 2px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-cancel:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 15px rgba(0, 255, 65, 0.3);
+  background: var(--bg-primary);
+}
+
+.btn-confirm {
+  background: rgba(255, 0, 102, 0.1);
+  border: 2px solid var(--accent-color);
+  color: var(--accent-color);
+}
+
+.btn-confirm:hover:not(:disabled) {
+  background: rgba(255, 0, 102, 0.2);
+  box-shadow: 0 0 20px rgba(255, 0, 102, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(102, 102, 102, 0.1);
+  border-color: var(--text-muted);
+  color: var(--text-muted);
+}
+
+/* Button pulse animation for enabled confirm button */
+.btn-confirm:not(:disabled) {
+  animation: danger-pulse 2s ease-in-out infinite;
+}
+
+@keyframes danger-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 10px rgba(255, 0, 102, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 25px rgba(255, 0, 102, 0.6);
+  }
+}
+
+/* Status Bar Auto-Reactivation */
+.status-item.auto-reactivation {
+  background: rgba(255, 0, 102, 0.1);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  animation: danger-pulse 2s ease-in-out infinite;
+}
+
+.status-item.auto-reactivation.hidden {
+  display: none;
+}
+
+.reactivation-text {
+  color: var(--accent-color);
+  font-weight: bold;
+  font-size: 0.7rem;
+}
+
+.reactivation-timer {
+  color: var(--primary-color);
+  font-family: 'Orbitron', monospace;
+  font-weight: bold;
+  font-size: 0.8rem;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   #home-screen h1, .logo {

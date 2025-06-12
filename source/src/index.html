@@ -100,8 +100,59 @@
         <div class="status-item">
           <span>STEALTH: ACTIVE</span>
         </div>
-      </div>      <div class="status-right">
+        <div class="status-item auto-reactivation hidden" id="auto-reactivation-status">
+          <span class="reactivation-text">AUTO-REACTIVATION: </span>
+          <span class="reactivation-timer" id="reactivation-timer">--:--</span>
+        </div>
+      </div>
+      <div class="status-right">
         AEGIS_SHELL_v1.1-BETA
+      </div>
+    </div>    <!-- Protection Verification Modal -->
+    <div id="protection-verification-modal" class="protection-modal hidden">
+      <div class="protection-modal-content">
+        <div class="protection-modal-header">
+          <h2>🛡️ SECURITY VERIFICATION</h2>
+          <div class="protection-warning">
+            ⚠️ YOU ARE ABOUT TO DISABLE PROTECTION
+          </div>
+        </div>
+        
+        <div class="protection-modal-body">
+          <div class="verification-warning">
+            <p><strong>WARNING:</strong> Disabling protection makes all windows visible to screenshots and screen recordings.</p>
+            <p>This action can be undone when you manually re-enable protection or the Timer expires.</p>
+          </div>
+          
+          <div class="verification-input-section">
+            <label for="verification-code">Confirmation required:</label>
+            <p class="verification-instruction">Type <strong>"DEACTIVATE"</strong> to continue:</p>
+            <input 
+              type="text" 
+              id="verification-code" 
+              placeholder="Type DEACTIVATE..."
+              class="verification-input"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </div>
+          
+          <div class="verification-countdown">
+            <div class="countdown-text">Confirmation available in: <span id="countdown-timer">10</span> seconds</div>
+            <div class="countdown-bar">
+              <div class="countdown-progress" id="countdown-progress"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="protection-modal-actions">
+          <button id="cancel-protection-btn" class="btn-cancel">
+            🚫 CANCEL
+          </button>
+          <button id="confirm-protection-btn" class="btn-confirm" disabled>
+            ⚠️ DISABLE PROTECTION
+          </button>
+        </div>
       </div>
     </div>
   </body>

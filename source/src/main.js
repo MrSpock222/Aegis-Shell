@@ -84,11 +84,32 @@ let closeLogsBtn;
 let logsContent;
 let protectionToggleBtn;
 
+// Protection verification modal elements
+let protectionModal;
+let verificationInput;
+let confirmProtectionBtn;
+let cancelProtectionBtn;
+let countdownTimer;
+let countdownProgress;
+
+// Auto-reactivation status elements
+let autoReactivationStatus;
+let reactivationTimer;
+
 // Current app state
 let isOnHomePage = true;
 let systemLogs = [];
 let isProtectionEnabled = true;
 let activeWindows = []; // Track all active windows
+
+// Protection verification state
+let verificationCountdown = 10;
+let countdownInterval = null;
+let isVerificationInProgress = false;
+
+// Auto-reactivation timer
+let autoReactivationTimer = null;
+let autoReactivationCountdown = 300; // 5 minutes in seconds
 
 // Initialize with startup log
 systemLogs.push({
@@ -282,23 +303,38 @@ function setupEventListeners() {
       handleHomeUrlNavigation();
     }
   });
+  // Protection toggle button
+  console.log("🛡️ Setting up protection toggle button");
+  addSystemLog('🛡️ Setting up protection toggle button', 'info');
+  protectionToggleBtn.addEventListener("click", () => {
+    console.log("🔄 Protection toggle button clicked");
+    addSystemLog('🔄 Protection toggle button clicked', 'info');
+    
+    if (isProtectionEnabled) {
+      // Show verification modal instead of directly toggling
+      showProtectionVerificationModal();
+    } else {
+      // Enable protection directly (no verification needed for enabling)
+      toggleProtection();
+    }
+  });
+
+  // Protection verification modal event listeners
+  setupProtectionVerificationListeners();
+
   // System logs button
+  console.log("📋 Setting up system logs button");
+  addSystemLog('📋 Setting up system logs button', 'info');
   systemLogsBtn.addEventListener("click", () => {
+    console.log("📋 System logs button clicked");
     toggleSystemLogs();
   });
 
   // Close logs button
   closeLogsBtn.addEventListener("click", () => {
-    systemLogsPanel.classList.add('hidden');
-    addSystemLog('📋 System logs panel closed', 'info');
-  });  // Protection toggle button
-  protectionToggleBtn.addEventListener("click", () => {
-    addSystemLog('🔄 Global protection toggle requested', 'info');
-    logWindowStatus();
-    toggleProtection();
-  });
-
-  // Quick link shortcuts
+    console.log("❌ Close logs button clicked");
+    toggleSystemLogs();
+  });  // Quick link shortcuts
   console.log(`🔗 Setting up ${quickLinks.length} quick links`);
   addSystemLog(`🔗 Setting up ${quickLinks.length} quick links`, 'info');
   quickLinks.forEach((link, index) => {
@@ -421,6 +457,33 @@ window.addEventListener("DOMContentLoaded", async () => {
   logsContent = document.querySelector("#logs-content");
   protectionToggleBtn = document.querySelector("#protection-toggle-btn");
   protectionToggleBtn = document.querySelector("#protection-toggle-btn");
+    // Protection verification modal elements
+  protectionModal = document.getElementById("protection-verification-modal");
+  verificationInput = document.getElementById("verification-code");
+  confirmProtectionBtn = document.getElementById("confirm-protection-btn");
+  cancelProtectionBtn = document.getElementById("cancel-protection-btn");
+  countdownTimer = document.getElementById("countdown-timer");
+  countdownProgress = document.getElementById("countdown-progress");
+
+  // Auto-reactivation status elements
+  autoReactivationStatus = document.getElementById("auto-reactivation-status");
+  reactivationTimer = document.getElementById("reactivation-timer");
+  
+  // Validate critical protection modal elements
+  const missingElements = [];
+  if (!protectionModal) missingElements.push('protection-verification-modal');
+  if (!verificationInput) missingElements.push('verification-code');
+  if (!confirmProtectionBtn) missingElements.push('confirm-protection-btn');
+  if (!cancelProtectionBtn) missingElements.push('cancel-protection-btn');
+  if (!countdownTimer) missingElements.push('countdown-timer');
+  if (!countdownProgress) missingElements.push('countdown-progress');
+  
+  if (missingElements.length > 0) {
+    console.warn('Missing protection modal elements:', missingElements);
+    addSystemLog(`⚠️ Missing DOM elements: ${missingElements.join(', ')}`, 'warning');
+  } else {
+    addSystemLog('✅ All protection modal elements found', 'success');
+  }
   
   // Initialize system logs
   addSystemLog('🚀 AEGIS SHELL INITIALIZING...', 'info');
@@ -495,6 +558,10 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
     console.log("🚀 AEGIS SHELL INITIALIZED - Secure invisible browsing ready");
   addSystemLog('🚀 AEGIS SHELL INITIALIZED - Secure invisible browsing ready', 'success');
+  addSystemLog('🛡️ Enhanced error handling and window management active', 'info');
+  addSystemLog('🔧 Auto-recovery system enabled', 'info');
+  
+  console.log("✅ Aegis Shell initialization complete with enhanced error handling");
   
   // Periodic update of button tooltip with window count
   setInterval(() => {
@@ -572,6 +639,7 @@ async function toggleProtection() {
     if (isProtectionEnabled) {
       // Disable protection for all windows
       addSystemLog('🔄 Disabling protection for all windows...', 'info');
+      addSystemLog('⚠️ CRITICAL: User bypassed security verification', 'error');
       
       // 1. Update global backend state FIRST
       try {
@@ -582,15 +650,22 @@ async function toggleProtection() {
       }
       
       // 2. Disable for main window
-      const mainResult = await disableScreenshotProtection();
-        // 3. Disable for all active browser windows
+      const mainResult = await disableScreenshotProtection();        // 3. Disable for all active browser windows
       let windowCount = 0;
+      
+      // Clean up dead windows first
+      cleanupDeadWindows();
+      
       for (const windowInfo of activeWindows) {
         if (windowInfo.label) {
           try {
-            await applyProtectionToWindow(windowInfo.label, false);
-            windowCount++;
-            addSystemLog(`🔓 Protection disabled for: ${windowInfo.label}`, 'warning');
+            const success = await applyProtectionToWindow(windowInfo.label, false);
+            if (success) {
+              windowCount++;
+              addSystemLog(`🔓 Protection disabled for: ${windowInfo.label}`, 'warning');
+            } else {
+              addSystemLog(`⚠️ Could not disable protection for: ${windowInfo.label}`, 'warning');
+            }
           } catch (error) {
             addSystemLog(`❌ Failed to disable protection for: ${windowInfo.label}`, 'error');
           }
@@ -605,10 +680,14 @@ async function toggleProtection() {
         
         addSystemLog(`🔓 Screenshot protection DISABLED for ${windowCount + 1} windows`, 'warning');
         addSystemLog('⚠️ Warning: All windows are now vulnerable to screenshots', 'warning');
+        
+        // Start auto-reactivation timer (5 minutes)
+        startAutoReactivationTimer();
       }
     } else {
       // Enable protection for all windows
       addSystemLog('🔄 Enabling protection for all windows...', 'info');
+      addSystemLog('✅ SECURITY: Protection re-enabled by user', 'success');
       
       // 1. Update global backend state FIRST
       try {
@@ -619,15 +698,22 @@ async function toggleProtection() {
       }
       
       // 2. Enable for main window
-      const mainResult = await enableScreenshotProtection();
-        // 3. Enable for all active browser windows
+      const mainResult = await enableScreenshotProtection();        // 3. Enable for all active browser windows
       let windowCount = 0;
+      
+      // Clean up dead windows first
+      cleanupDeadWindows();
+      
       for (const windowInfo of activeWindows) {
         if (windowInfo.label) {
           try {
-            await applyProtectionToWindow(windowInfo.label, true);
-            windowCount++;
-            addSystemLog(`🛡️ Protection enabled for: ${windowInfo.label}`, 'success');
+            const success = await applyProtectionToWindow(windowInfo.label, true);
+            if (success) {
+              windowCount++;
+              addSystemLog(`🛡️ Protection enabled for: ${windowInfo.label}`, 'success');
+            } else {
+              addSystemLog(`⚠️ Could not enable protection for: ${windowInfo.label}`, 'warning');
+            }
           } catch (error) {
             addSystemLog(`❌ Failed to enable protection for: ${windowInfo.label}`, 'error');
           }
@@ -642,6 +728,9 @@ async function toggleProtection() {
         
         addSystemLog(`🛡️ Screenshot protection ENABLED for ${windowCount + 1} windows`, 'success');
         addSystemLog('✅ All windows are now protected from screenshots', 'success');
+        
+        // Clear auto-reactivation timer
+        clearAutoReactivationTimer();
       }
     }
   } catch (error) {
@@ -731,5 +820,498 @@ function logWindowStatus() {
   if (activeWindows.length > 0) {
     const windowLabels = activeWindows.map(w => w.label).join(', ');
     addSystemLog(`🪟 Window labels: ${windowLabels}`, 'info');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PROTECTION VERIFICATION MODAL
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Show protection verification modal
+function showProtectionVerificationModal() {
+  if (isVerificationInProgress) return;
+  
+  // Check if modal is available
+  if (!protectionModal || !verificationInput || !confirmProtectionBtn) {
+    console.error('Protection verification modal elements not found');
+    addSystemLog('❌ Protection verification modal not available', 'error');
+    alert('Protection verification is not available. Please reload the application.');
+    return;
+  }
+  
+  isVerificationInProgress = true;
+  
+  // RESET ALL VERIFICATION STATE - This fixes the timer bug
+  verificationCountdown = 10;
+  
+  // Reset modal state completely
+  verificationInput.value = '';
+  verificationInput.classList.remove('correct');
+  confirmProtectionBtn.disabled = true;
+  
+  // Reset countdown display to initial state (safe method)
+  safeResetCountdownTimer();
+  
+  // Show modal
+  protectionModal.classList.remove('hidden');
+  
+  // Start fresh countdown
+  startVerificationCountdown();
+  
+  // Focus input after a short delay
+  setTimeout(() => {
+    verificationInput.focus();
+  }, 300);
+  
+  addSystemLog('🚨 Protection verification modal opened', 'warning');
+}
+
+// Hide protection verification modal
+function hideProtectionVerificationModal() {
+  protectionModal.classList.add('hidden');
+  isVerificationInProgress = false;
+  
+  // Clear countdown
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+    // Reset ALL verification state completely
+  verificationCountdown = 10;
+  verificationInput.value = '';
+  verificationInput.classList.remove('correct');
+  confirmProtectionBtn.disabled = true;
+  
+  // Reset countdown display to initial state (safe method)
+  safeResetCountdownTimer();
+  
+  addSystemLog('✅ Protection verification modal closed', 'info');
+}
+
+// Start verification countdown
+function startVerificationCountdown() {
+  updateCountdownDisplay();
+  
+  countdownInterval = setInterval(() => {
+    verificationCountdown--;
+    updateCountdownDisplay();
+    
+    if (verificationCountdown <= 0) {
+      clearInterval(countdownInterval);
+      countdownInterval = null;
+      
+      // Enable input validation after countdown
+      enableVerificationInput();
+      addSystemLog('⏰ Verification countdown completed - input enabled', 'info');
+    }
+  }, 1000);
+}
+
+// Update countdown display
+function updateCountdownDisplay() {
+  if (countdownTimer) {
+    countdownTimer.textContent = verificationCountdown;
+  }
+  
+  if (countdownProgress) {
+    const percentage = ((10 - verificationCountdown) / 10) * 100;
+    countdownProgress.style.width = `${percentage}%`;
+  }
+  
+  // Update button state based on countdown
+  if (verificationCountdown <= 0 && verificationInput.value.toUpperCase() === 'DEACTIVATE') {
+    confirmProtectionBtn.disabled = false;
+  }
+}
+
+// Enable verification input validation
+function enableVerificationInput() {
+  // Update countdown text to English (safe method)
+  safeUpdateCountdownText('Confirmation is <span style="color: var(--primary-color);">NOW AVAILABLE</span>');
+  
+  // Check current input value
+  validateVerificationInput();
+}
+
+// Validate verification input
+function validateVerificationInput() {
+  const inputValue = verificationInput.value.toUpperCase();
+  const isCorrect = inputValue === 'DEACTIVATE';
+  
+  if (isCorrect) {
+    verificationInput.classList.add('correct');
+    if (verificationCountdown <= 0) {
+      confirmProtectionBtn.disabled = false;
+    }
+  } else {
+    verificationInput.classList.remove('correct');
+    confirmProtectionBtn.disabled = true;
+  }
+}
+
+// Setup protection verification event listeners
+function setupProtectionVerificationListeners() {
+  if (!verificationInput || !confirmProtectionBtn || !cancelProtectionBtn || !protectionModal) {
+    console.warn('Protection verification elements not found - listeners not setup');
+    addSystemLog('⚠️ Protection verification elements missing - some features may not work', 'warning');
+    return;
+  }
+  
+  // Input validation
+  verificationInput.addEventListener('input', validateVerificationInput);
+  
+  // Enter key handling
+  verificationInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !confirmProtectionBtn.disabled) {
+      confirmProtectionBtn.click();
+    } else if (e.key === 'Escape') {
+      cancelProtectionBtn.click();
+    }
+  });
+    // Confirm button
+  confirmProtectionBtn.addEventListener('click', () => {
+    if (verificationInput.value.toUpperCase() === 'DEACTIVATE' && verificationCountdown <= 0) {
+      addSystemLog('🔓 User confirmed protection deactivation', 'warning');
+      addSystemLog('⚠️ SECURITY ALERT: Protection verification bypassed by user', 'error');
+      hideProtectionVerificationModal();
+      
+      // Show final warning before proceeding
+      setTimeout(() => {
+        // Proceed with actual protection toggle
+        toggleProtection();
+      }, 500);
+    }
+  });
+  
+  // Cancel button
+  cancelProtectionBtn.addEventListener('click', () => {
+    addSystemLog('❌ User cancelled protection deactivation', 'info');
+    hideProtectionVerificationModal();
+  });
+  
+  // Close modal on background click
+  protectionModal.addEventListener('click', (e) => {
+    if (e.target === protectionModal) {
+      addSystemLog('❌ Protection verification cancelled (background click)', 'info');
+      hideProtectionVerificationModal();
+    }
+  });
+  
+  addSystemLog('🔧 Protection verification listeners setup complete', 'success');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ERROR HANDLING ENHANCEMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Global error handler
+window.addEventListener('error', (event) => {
+  const { message, source, lineno, colno, error } = event;
+  const errorMsg = `❌ Uncaught Error: ${message} at ${source}:${lineno}:${colno}`;
+  
+  addSystemLog(errorMsg, 'error');
+  console.error(errorMsg, error);
+  
+  // Alert user with a friendly message
+  alert('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es später erneut.');
+});
+
+// Log unhandled promise rejections
+window.addEventListener('unhandledrejection', (event) => {
+  const { reason } = event;
+  const errorMsg = `❌ Unhandled Rejection: ${reason}`;
+  
+  addSystemLog(errorMsg, 'error');
+  console.error(errorMsg);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLOBAL ERROR RECOVERY SYSTEM
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Global error recovery function
+function performErrorRecovery() {
+  try {
+    addSystemLog('🔧 Performing error recovery...', 'info');
+    
+    // 1. Clean up dead windows
+    cleanupDeadWindows();
+    
+    // 2. Verify protection state consistency
+    updateProtectionButton();
+    
+    // 3. Update UI state
+    updateUIForProtectionState(isProtectionEnabled);
+    
+    addSystemLog('✅ Error recovery completed', 'success');
+  } catch (error) {
+    console.error('Error during recovery:', error);
+    addSystemLog(`❌ Error recovery failed: ${error.message}`, 'error');
+  }
+}
+
+// Periodic system health check
+setInterval(() => {
+  try {
+    performErrorRecovery();
+  } catch (error) {
+    console.error('System health check failed:', error);
+  }
+}, 60000); // Every minute
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PERIODIC TASKS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Periodic health check of active windows
+setInterval(() => {
+  try {
+    // Clean up any dead windows first
+    cleanupDeadWindows();
+    
+    // Log current status
+    console.log(`Health check: ${activeWindows.length} active window(s)`);
+    
+    // Optional: Update protection status for all active windows
+    if (activeWindows.length > 0) {
+      addSystemLog(`💓 Health check: ${activeWindows.length} window(s) active`, 'info');
+    }
+  } catch (error) {
+    console.error('Error during window health check:', error);
+    addSystemLog(`❌ Window health check failed: ${error.message}`, 'error');
+  }
+}, 30000); // 30 seconds interval
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTO-REACTIVATION SECURITY TIMER
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Start auto-reactivation timer (automatically re-enable protection after 5 minutes)
+function startAutoReactivationTimer() {
+  // Clear any existing timer
+  clearAutoReactivationTimer();
+  
+  autoReactivationCountdown = 300; // 5 minutes
+  addSystemLog(`⏱️ Auto-reactivation timer started: Protection will re-enable in ${Math.floor(autoReactivationCountdown / 60)} minutes`, 'warning');
+  
+  // Show auto-reactivation status in UI
+  if (autoReactivationStatus) {
+    autoReactivationStatus.classList.remove('hidden');
+  }
+  
+  autoReactivationTimer = setInterval(async () => {
+    autoReactivationCountdown--;
+    
+    // Update UI timer display
+    updateAutoReactivationDisplay();
+    
+    // Log countdown at specific intervals
+    if (autoReactivationCountdown === 240) { // 4 minutes remaining
+      addSystemLog('⏱️ Auto-reactivation in 4 minutes', 'warning');
+    } else if (autoReactivationCountdown === 180) { // 3 minutes remaining
+      addSystemLog('⏱️ Auto-reactivation in 3 minutes', 'warning');
+    } else if (autoReactivationCountdown === 120) { // 2 minutes remaining
+      addSystemLog('⏱️ Auto-reactivation in 2 minutes', 'warning');
+    } else if (autoReactivationCountdown === 60) { // 1 minute remaining
+      addSystemLog('⏱️ FINAL WARNING: Auto-reactivation in 1 minute', 'error');
+    } else if (autoReactivationCountdown === 30) { // 30 seconds remaining
+      addSystemLog('🚨 CRITICAL: Auto-reactivation in 30 seconds', 'error');
+    } else if (autoReactivationCountdown <= 10 && autoReactivationCountdown > 0) { // Final countdown
+      addSystemLog(`🚨 AUTO-REACTIVATION IN ${autoReactivationCountdown} SECONDS`, 'error');
+    }
+    
+    // Auto-reactivate when countdown reaches 0
+    if (autoReactivationCountdown <= 0) {
+      clearAutoReactivationTimer();
+      
+      if (!isProtectionEnabled) {
+        addSystemLog('🤖 AUTO-REACTIVATION: Protection automatically re-enabled for security', 'success');
+        await toggleProtectionDirectly(true); // Use direct toggle to bypass verification
+      }
+    }
+  }, 1000);
+}
+
+// Clear auto-reactivation timer
+function clearAutoReactivationTimer() {
+  if (autoReactivationTimer) {
+    clearInterval(autoReactivationTimer);
+    autoReactivationTimer = null;
+    addSystemLog('⏱️ Auto-reactivation timer cleared', 'info');
+  }
+  
+  // Hide auto-reactivation status in UI
+  if (autoReactivationStatus) {
+    autoReactivationStatus.classList.add('hidden');
+  }
+}
+
+// Update auto-reactivation display
+function updateAutoReactivationDisplay() {
+  if (reactivationTimer && autoReactivationCountdown > 0) {
+    const minutes = Math.floor(autoReactivationCountdown / 60);
+    const seconds = autoReactivationCountdown % 60;
+    reactivationTimer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+}
+
+// Direct protection toggle (bypasses verification - used for auto-reactivation)
+async function toggleProtectionDirectly(enable) {
+  try {
+    if (enable && !isProtectionEnabled) {
+      // Enable protection for all windows (direct)
+      addSystemLog('🔄 Auto-enabling protection for all windows...', 'info');
+      
+      // 1. Update global backend state FIRST
+      try {
+        await invoke('set_global_protection_state', { enabled: true });
+        addSystemLog('🔄 Backend global protection state: ENABLED (AUTO)', 'info');
+      } catch (error) {
+        addSystemLog(`❌ Failed to update backend protection state: ${error}`, 'error');
+      }
+      
+      // 2. Enable for main window
+      const mainResult = await enableScreenshotProtection();
+        // 3. Enable for all active browser windows
+      let windowCount = 0;
+      
+      // Clean up dead windows first
+      cleanupDeadWindows();
+      
+      for (const windowInfo of activeWindows) {
+        if (windowInfo.label) {
+          try {
+            const success = await applyProtectionToWindow(windowInfo.label, true);
+            if (success) {
+              windowCount++;
+              addSystemLog(`🛡️ Protection auto-enabled for: ${windowInfo.label}`, 'success');
+            } else {
+              addSystemLog(`⚠️ Could not auto-enable protection for: ${windowInfo.label}`, 'warning');
+            }
+          } catch (error) {
+            addSystemLog(`❌ Failed to auto-enable protection for: ${windowInfo.label}`, 'error');
+          }
+        }
+      }
+      
+      if (mainResult) {
+        isProtectionEnabled = true;
+        updateProtectionButton();
+        
+        // Broadcast state change to all windows
+        await broadcastProtectionStateChange(true);
+        
+        addSystemLog(`🤖 Screenshot protection AUTO-ENABLED for ${windowCount + 1} windows`, 'success');
+        addSystemLog('✅ All windows are now protected from screenshots (AUTO)', 'success');
+      }
+    }
+  } catch (error) {
+    addSystemLog(`❌ Failed to auto-toggle protection: ${error.message}`, 'error');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENHANCED ERROR HANDLING & WINDOW MANAGEMENT
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Safe window operation wrapper
+function safeWindowOperation(windowInfo, operation, operationName = 'operation') {
+  try {
+    if (!windowInfo || !windowInfo.window) {
+      console.warn(`Cannot perform ${operationName}: window info is invalid`);
+      return false;
+    }
+    
+    // Check if window is still valid
+    if (windowInfo.window.label) {
+      return operation(windowInfo.window);
+    } else {
+      console.warn(`Window ${windowInfo.label} appears to be closed`);
+      return false;
+    }
+  } catch (error) {
+    console.error(`Error during ${operationName} for window ${windowInfo.label}:`, error);
+    addSystemLog(`❌ ${operationName} failed for window ${windowInfo.label}: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+// Clean up dead windows from active windows list
+function cleanupDeadWindows() {
+  const initialCount = activeWindows.length;
+  
+  activeWindows = activeWindows.filter(windowInfo => {
+    try {
+      // Test if window is still alive by accessing its label
+      if (windowInfo.window && windowInfo.window.label) {
+        return true; // Window is still alive
+      }
+      return false; // Window is dead
+    } catch (error) {
+      console.warn(`Removing dead window: ${windowInfo.label}`, error);
+      addSystemLog(`🗑️ Removed dead window: ${windowInfo.label}`, 'info');
+      return false;
+    }
+  });
+  
+  const removedCount = initialCount - activeWindows.length;
+  if (removedCount > 0) {
+    addSystemLog(`🧹 Cleaned up ${removedCount} dead window(s)`, 'info');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SAFE DOM MANIPULATION HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Safely update countdown timer text with null checks
+function safeUpdateCountdownText(htmlContent) {
+  try {
+    // Method 1: Use existing countdownTimer reference
+    if (countdownTimer && countdownTimer.parentElement) {
+      countdownTimer.parentElement.innerHTML = htmlContent;
+      // Re-get the countdown timer element after innerHTML change
+      countdownTimer = document.getElementById("countdown-timer");
+      return true;
+    }
+    
+    // Method 2: Direct selector fallback
+    const countdownText = document.querySelector('.countdown-text');
+    if (countdownText) {
+      countdownText.innerHTML = htmlContent;
+      countdownTimer = document.getElementById("countdown-timer");
+      return true;
+    }
+    
+    console.warn('Could not update countdown text - elements not found');
+    return false;
+  } catch (error) {
+    console.error('Error updating countdown text:', error);
+    addSystemLog(`❌ Failed to update countdown display: ${error.message}`, 'error');
+    return false;
+  }
+}
+
+// Safely reset countdown timer to initial state
+function safeResetCountdownTimer() {
+  try {
+    // Reset countdown value
+    if (countdownTimer) {
+      countdownTimer.textContent = '10';
+    }
+    
+    // Reset countdown display
+    safeUpdateCountdownText('Confirmation available in: <span id="countdown-timer">10</span> seconds');
+    
+    // Reset progress bar
+    if (countdownProgress) {
+      countdownProgress.style.width = '0%';
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error resetting countdown timer:', error);
+    addSystemLog(`❌ Failed to reset countdown timer: ${error.message}`, 'error');
+    return false;
   }
 }
