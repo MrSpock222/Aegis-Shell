@@ -596,10 +596,13 @@ async function toggleProtection() {
           }
         }
       }
-      
-      if (mainResult) {
+        if (mainResult) {
         isProtectionEnabled = false;
         updateProtectionButton();
+        
+        // Broadcast state change to all windows
+        await broadcastProtectionStateChange(false);
+        
         addSystemLog(`🔓 Screenshot protection DISABLED for ${windowCount + 1} windows`, 'warning');
         addSystemLog('⚠️ Warning: All windows are now vulnerable to screenshots', 'warning');
       }
@@ -630,16 +633,32 @@ async function toggleProtection() {
           }
         }
       }
-      
-      if (mainResult) {
+        if (mainResult) {
         isProtectionEnabled = true;
         updateProtectionButton();
+        
+        // Broadcast state change to all windows
+        await broadcastProtectionStateChange(true);
+        
         addSystemLog(`🛡️ Screenshot protection ENABLED for ${windowCount + 1} windows`, 'success');
         addSystemLog('✅ All windows are now protected from screenshots', 'success');
       }
     }
   } catch (error) {
     addSystemLog(`❌ Failed to toggle protection: ${error.message}`, 'error');
+  }
+}
+
+// Broadcast protection state change to all windows
+async function broadcastProtectionStateChange(enabled) {
+  try {
+    // Emit event to all windows
+    await invoke('emit_protection_state_event', { enabled });
+    console.log(`📡 Protection state broadcasted: ${enabled}`);
+    addSystemLog(`📡 Protection state broadcasted to all windows: ${enabled ? 'ENABLED' : 'DISABLED'}`, 'info');
+  } catch (error) {
+    console.error('Failed to broadcast protection state:', error);
+    addSystemLog(`❌ Failed to broadcast protection state: ${error.message}`, 'error');
   }
 }
 
@@ -651,10 +670,55 @@ function updateProtectionButton() {
     protectionToggleBtn.className = 'protection-enabled';
     protectionToggleBtn.textContent = '🛡️ PROTECTION ON';
     protectionToggleBtn.title = `Click to disable screenshot protection for all windows (${activeWindows.length + 1} total)`;
+    
+    // UI für aktiven Schutz
+    document.body.classList.remove('protection-disabled');
+    updateUIForProtectionState(true);
   } else {
     protectionToggleBtn.className = 'protection-disabled';
     protectionToggleBtn.textContent = '🔓 PROTECTION OFF';
     protectionToggleBtn.title = `Click to enable screenshot protection for all windows (${activeWindows.length + 1} total)`;
+    
+    // UI für deaktivierten Schutz
+    document.body.classList.add('protection-disabled');
+    updateUIForProtectionState(false);
+  }
+}
+
+// Update UI basierend auf Protection State
+function updateUIForProtectionState(isProtected) {
+  const securityBadge = document.querySelector('.security-badge');
+  const statusItems = document.querySelectorAll('.status-item span');
+  
+  if (isProtected) {
+    // Geschützter Zustand
+    if (securityBadge) {
+      securityBadge.innerHTML = '🛡️ SECURE';
+    }
+    
+    // Status-Updates für geschützten Zustand
+    if (statusItems.length >= 3) {
+      statusItems[0].textContent = 'PROTECTED';
+      statusItems[1].textContent = 'ENCRYPTION: AES-256';
+      statusItems[2].textContent = 'STEALTH: ACTIVE';
+    }
+    
+    addSystemLog('✅ UI updated for PROTECTED state', 'success');
+  } else {
+    // Ungeschützter Zustand
+    if (securityBadge) {
+      securityBadge.innerHTML = '⚠️ UNPROTECTED';
+    }
+    
+    // Status-Updates für ungeschützten Zustand
+    if (statusItems.length >= 3) {
+      statusItems[0].textContent = 'VULNERABLE';
+      statusItems[1].textContent = 'ENCRYPTION: DISABLED';
+      statusItems[2].textContent = 'STEALTH: INACTIVE';
+    }
+    
+    addSystemLog('⚠️ UI updated for UNPROTECTED state', 'warning');
+    addSystemLog('🚨 WARNING: Application is now visible to screenshot tools!', 'error');
   }
 }
 

@@ -20,6 +20,71 @@
         background: #242424;
         height: 100vh;
         overflow: hidden;
+        transition: all 0.3s ease;
+      }
+
+      /* ═══════════════════════════════════════════════════════════════ */
+      /* UNPROTECTED STATE - Rote durchlässige Umrandung */
+      /* ═══════════════════════════════════════════════════════════════ */
+      
+      body.unprotected-window {
+        border: 4px solid rgba(255, 68, 68, 0.8);
+        box-shadow: 
+          inset 0 0 20px rgba(255, 68, 68, 0.3),
+          0 0 30px rgba(255, 68, 68, 0.5);
+        background: #1a0000;
+        animation: unprotected-warning-pulse 2s ease-in-out infinite;
+      }
+
+      @keyframes unprotected-warning-pulse {
+        0%, 100% { 
+          border-color: rgba(255, 68, 68, 0.8);
+          box-shadow: 
+            inset 0 0 20px rgba(255, 68, 68, 0.3),
+            0 0 30px rgba(255, 68, 68, 0.5);
+        }
+        50% { 
+          border-color: rgba(255, 68, 68, 1.0);
+          box-shadow: 
+            inset 0 0 30px rgba(255, 68, 68, 0.5),
+            0 0 50px rgba(255, 68, 68, 0.8);
+        }
+      }
+
+      /* Warning Banner für ungeschützte Fenster */
+      .window-warning-banner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(90deg, #ff4444, #ff0000, #ff4444);
+        color: white;
+        text-align: center;
+        padding: 0.3rem;
+        font-family: 'Orbitron', monospace;
+        font-weight: 700;
+        font-size: 0.8rem;
+        z-index: 10000;
+        animation: window-warning-pulse 1.5s ease-in-out infinite;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: none;
+      }
+
+      body.unprotected-window .window-warning-banner {
+        display: block;
+      }
+
+      @keyframes window-warning-pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+
+      /* Navigation Bar Anpassungen für ungeschützte Fenster */
+      body.unprotected-window .nav-bar {
+        background: rgba(255, 68, 68, 0.2);
+        border-bottom: 1px solid #ff4444;
+        margin-top: 2rem; /* Platz für Warning Banner */
       }
 
       /* ─────────────────────────────────────────────────────────────────────────────
@@ -121,9 +186,13 @@
       /* Hide nav bar after successful redirect */
       .hide-nav .nav-bar {
         display: none;
-      }    </style>
-  </head>
+      }    </style>  </head>
   <body>
+    <!-- Window Warning Banner -->
+    <div class="window-warning-banner">
+      ⚠️ UNPROTECTED WINDOW - VISIBLE TO SCREENSHOTS ⚠️
+    </div>
+    
     <div class="nav-bar">
       <button class="nav-button" onclick="goHome()">🏠 Home</button>
       <button class="nav-button" onclick="refreshPage()">🔄</button>
@@ -302,6 +371,54 @@
       }      
 
       // ─────────────────────────────────────────────────────────────────────────────
+      // WINDOW PROTECTION STATE MONITORING
+      // ─────────────────────────────────────────────────────────────────────────────
+
+      // Check and update window protection state
+      async function checkAndUpdateProtectionState() {
+        try {
+          // Check global protection state from backend
+          const globalProtectionEnabled = await invoke('get_global_protection_state');
+          console.log('🔍 WEBSITE: Global protection state:', globalProtectionEnabled);
+          
+          if (!globalProtectionEnabled) {
+            // Protection is disabled globally, show warning UI
+            document.body.classList.add('unprotected-window');
+            console.log('⚠️ WEBSITE: Window marked as UNPROTECTED');
+          } else {
+            // Protection is enabled, remove warning UI
+            document.body.classList.remove('unprotected-window');
+            console.log('🛡️ WEBSITE: Window marked as PROTECTED');
+          }
+        } catch (error) {
+          console.error('❌ WEBSITE: Failed to check protection state:', error);
+          // On error, assume unprotected for safety
+          document.body.classList.add('unprotected-window');
+        }
+      }
+
+      // Listen for protection state changes
+      async function setupProtectionStateListener() {
+        try {
+          // Listen for global protection state changes
+          await window.__TAURI__.event.listen('protection-state-changed', (event) => {
+            const { enabled } = event.payload;
+            console.log('🔄 WEBSITE: Protection state changed:', enabled);
+            
+            if (enabled) {
+              document.body.classList.remove('unprotected-window');
+              console.log('✅ WEBSITE: Window now PROTECTED');
+            } else {
+              document.body.classList.add('unprotected-window');
+              console.log('⚠️ WEBSITE: Window now UNPROTECTED');
+            }
+          });
+        } catch (error) {
+          console.error('❌ WEBSITE: Failed to setup protection listener:', error);
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────────────────────
       // WEBSITE WINDOW INITIALIZATION
       // ─────────────────────────────────────────────────────────────────────────────      // Main startup sequence for website windows
       window.addEventListener('DOMContentLoaded', async () => {
@@ -360,6 +477,12 @@
             navigateToWebsite(url);
           }
         });
+
+        // Initial protection state check
+        checkAndUpdateProtectionState();
+
+        // Setup protection state listener
+        setupProtectionStateListener();
       });
 
       // ─────────────────────────────────────────────────────────────────────────────

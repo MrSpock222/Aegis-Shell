@@ -1,4 +1,4 @@
-use tauri::{Manager, WebviewWindow, Listener, State};
+use tauri::{Manager, WebviewWindow, Listener, State, Emitter};
 use std::sync::{Arc, Mutex};
 
 // Global protection state
@@ -141,6 +141,18 @@ async fn check_screenshot_protection_status(window: WebviewWindow) -> std::resul
 
 // Alte greet-Funktion entfernt, da nicht mehr benötigt
 
+#[tauri::command]
+async fn emit_protection_state_event(
+    app_handle: tauri::AppHandle,
+    enabled: bool
+) -> Result<String, String> {
+    // Emit protection state change event to all windows
+    match app_handle.emit("protection-state-changed", serde_json::json!({ "enabled": enabled })) {
+        Ok(_) => Ok(format!("Protection state event emitted: {}", enabled)),
+        Err(e) => Err(format!("Failed to emit protection state event: {}", e))
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {    tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -152,7 +164,8 @@ pub fn run() {    tauri::Builder::default()
             enable_screenshot_protection_by_label,
             disable_screenshot_protection_by_label,
             set_global_protection_state,
-            get_global_protection_state
+            get_global_protection_state,
+            emit_protection_state_event
         ]).setup(|app| {
             // Aktiviere Screenshot-Schutz für das Hauptfenster beim Start
             if let Some(window) = app.get_webview_window("main") {
